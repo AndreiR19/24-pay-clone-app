@@ -1,0 +1,327 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>24pay clone</title>
+    <meta name="theme-color" content="#facc15" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./assets/icons/public-transport.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <style>
+      html, body { height: 100%; margin: 0; }
+      @keyframes pulse {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.6); }
+        70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(250, 204, 21, 0); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); }
+      }
+    </style>
+    <!-- React 18 UMD (development for clearer error messages) -->
+    <script src="https://unpkg.com/react@18.2.0/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.development.js"></script>
+    <!-- qrcodejs (reliable UMD global: window.QRCode) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Babel for in-browser JSX transform (dev convenience) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  </head>
+  <body>
+    <div id="root" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#111;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial">Loading…</div>
+
+    <script>
+      (function(){
+        const missing = [];
+        if (!window.React) missing.push('React');
+        if (!window.ReactDOM) missing.push('ReactDOM');
+        if (!window.Babel) missing.push('Babel');
+        if (missing.length) {
+          document.body.style.background = '#111';
+          document.body.style.color = 'white';
+          document.body.style.fontFamily = 'system-ui, -apple-system, Segoe UI, Roboto, Arial';
+          document.body.innerHTML = '<div style="padding:16px">Failed to load required libraries: <b>' + missing.join(', ') + '</b>.\n\nPlease check your internet connection and refresh.</div>';
+        }
+
+        window.addEventListener('error', function(e){
+          const msg = 'Runtime error: ' + (e.message || e.toString());
+          const stack = e.error && e.error.stack ? ('\n' + e.error.stack) : '';
+          const el = document.createElement('pre');
+          el.style.cssText = 'position:fixed;bottom:8px;left:8px;right:8px;max-height:40%;overflow:auto;background:#1f2937;color:#fca5a5;padding:12px;border-radius:8px;z-index:99999;white-space:pre-wrap;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+          el.textContent = msg + stack;
+          document.body.appendChild(el);
+        });
+        window.addEventListener('unhandledrejection', function(e){
+          const msg = 'Unhandled promise rejection: ' + (e.reason && e.reason.message ? e.reason.message : e.reason);
+          const el = document.createElement('pre');
+          el.style.cssText = 'position:fixed;bottom:8px;left:8px;right:8px;max-height:40%;overflow:auto;background:#1f2937;color:#fca5a5;padding:12px;border-radius:8px;z-index:99999;white-space:pre-wrap;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+          el.textContent = msg;
+          document.body.appendChild(el);
+        });
+      })();
+    </script>
+
+    <script type="text/babel" data-presets="react">
+      const { useEffect, useMemo, useState, useRef } = React;
+
+      const MOBILE_WIDTH = 390; // px
+      const VALIDITY_MINUTES = 90; // 1h30m validity
+      const CONTROL_CODE_SECONDS = 14; // QR/control code refresh cadence
+
+      function QRCodeBox({ value, size }) {
+        const containerRef = useRef(null);
+        const instanceRef = useRef(null);
+
+        useEffect(() => {
+          if (!containerRef.current || !window.QRCode) return;
+          // Clear previous
+          containerRef.current.innerHTML = '';
+          instanceRef.current = new window.QRCode(containerRef.current, {
+            text: String(value ?? ''),
+            width: size,
+            height: size,
+            correctLevel: window.QRCode.CorrectLevel.M,
+          });
+          return () => {
+            if (containerRef.current) {
+              containerRef.current.innerHTML = '';
+            }
+          };
+        }, [value, size]);
+
+        return <div ref={containerRef} style={{ width: size, height: size }} />;
+      }
+
+      function App() {
+        const [showQR, setShowQR] = useState(false);
+        const [startedAt, setStartedAt] = useState(null);
+        const [now, setNow] = useState(Date.now());
+        const [pulse, setPulse] = useState(false);
+
+        const ticket = useMemo(() => ({
+          type: 'URBAN ticket',
+          purchaseDate: new Date(),
+          orderNumber: '228162467',
+          price: '5.0 RON'
+        }), []);
+
+        useEffect(() => {
+          const t = setInterval(() => setNow(Date.now()), 1000);
+          return () => clearInterval(t);
+        }, []);
+
+        function openQR() {
+          setStartedAt(Date.now());
+          setShowQR(true);
+        }
+
+        function closeQR() {
+          setShowQR(false);
+        }
+
+        const elapsedMs = startedAt ? now - startedAt : 0;
+        const validityMs = VALIDITY_MINUTES * 60 * 1000;
+        const remainingMs = Math.max(validityMs - elapsedMs, 0);
+        const pct = startedAt ? Math.max(0, 1 - elapsedMs / validityMs) : 0;
+
+        // 14-second control code cycles
+        const controlMs = CONTROL_CODE_SECONDS * 1000;
+        const cycleIndex = startedAt ? Math.floor(elapsedMs / controlMs) : 0;
+        const msIntoCycle = startedAt ? (elapsedMs % controlMs) : 0;
+        const controlRemainingSec = startedAt ? Math.max(0, CONTROL_CODE_SECONDS - Math.floor(msIntoCycle / 1000)) : CONTROL_CODE_SECONDS;
+        const isExpired = !!startedAt && remainingMs <= 0;
+
+        // Pulse animation on each cycle change
+        useEffect(() => {
+          if (!startedAt) return;
+          setPulse(true);
+          const t = setTimeout(() => setPulse(false), 400);
+          return () => clearTimeout(t);
+        }, [cycleIndex]);
+
+        function formatDuration(ms) {
+          const s = Math.floor(ms / 1000);
+          const mm = Math.floor(s / 60).toString().padStart(2, '0');
+          const ss = (s % 60).toString().padStart(2, '0');
+          return `${mm}:${ss}`;
+        }
+
+        const qrSize = Math.min(MOBILE_WIDTH - 72, 320);
+
+        function formatShort(dt) {
+          const d = new Date(dt);
+          const dd = String(d.getDate()).padStart(2, '0');
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const yy = d.getFullYear();
+          const hh = String(d.getHours()).padStart(2, '0');
+          const min = String(d.getMinutes()).padStart(2, '0');
+          return `${dd}.${mm}.${yy}|${hh}:${min}`;
+        }
+
+        const validityStart = startedAt ? new Date(startedAt) : new Date();
+        const validityEnd = new Date((startedAt ? startedAt : Date.now()) + validityMs);
+
+        return (
+          <div style={{ minHeight: '100vh', background: '#171717', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+            <div style={{ color: 'white', background: '#171717', width: MOBILE_WIDTH }}>
+              <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 9999, background: 'linear-gradient(135deg,#facc15,#ff8a00)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: 'black' }}>24</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#e5e7eb' }}>pay</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 9999, background: '#262626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🔔</div>
+                  <div style={{ width: 32, height: 32, borderRadius: 9999, background: '#262626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⚙️</div>
+                  <div style={{ width: 32, height: 32, borderRadius: 9999, background: '#262626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>👤</div>
+                </div>
+              </header>
+
+              {/* Favorites */}
+              <div style={{ fontSize: 26, fontWeight: 800, margin: '4px 0 12px 0' }}>Favorites</div>
+              <section style={{ marginBottom: 24 }}>
+                <div onClick={openQR} style={{ cursor: 'pointer', borderRadius: 16, background: '#262626', padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #3f3f46' }}>
+                  <div style={{ flex: 1, display: 'flex', gap: 12 }}>
+                    <div style={{ width: 56, height: 56, borderRadius: 12, overflow: 'hidden', background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: 40, height: 18, background: 'linear-gradient(135deg,#1e3a8a 60%,#ef4444 60%)' }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, color: '#a3a3a3' }}>RATBV S.A.</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, marginTop: 6, color: '#e5e7eb' }}>Brașov - URBAN ticket - <span style={{ color: '#ffdd42' }}>{ticket.price}</span></div>
+                      <div style={{ marginTop: 8, height: 32, width: '100%', background: '#c7cffd', borderRadius: 10 }} />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 22, marginLeft: 12 }}>❤️</div>
+                </div>
+              </section>
+
+              {/* Services */}
+              <section style={{ marginBottom: 80 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ fontSize: 26, fontWeight: 800 }}>Services</div>
+                  <div style={{ color: '#facc15', fontSize: 16, fontWeight: 600 }}>View all services</div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
+                  {[
+                    { label: 'Public transport', tag: null },
+                    { label: 'Train CFR', tag: null },
+                    { label: 'PrePay', tag: null },
+                    { label: 'Bill Payment', tag: null },
+                    { label: 'Insurances & Pensions', tag: null },
+                    { label: 'Parking', tag: 'NEW' },
+                    { label: 'Intercity', tag: null },
+                    { label: 'RCA &', tag: 'NEW' },
+                  ].map((s, i) => (
+                    <div key={i} style={{ position: 'relative', background: '#25282f', borderRadius: 16, padding: 16, textAlign: 'left', fontSize: 13, color: '#e5e7eb', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 120 }}>
+                      {s.tag && (
+                        <div style={{ position: 'absolute', top: 8, right: 8, background: '#facc15', color: '#111', fontWeight: 800, fontSize: 10, padding: '2px 8px', borderRadius: 6 }}>NEW</div>
+                      )}
+                      <div style={{ fontSize: 28, opacity: 0.9, marginBottom: 10 }}>⬜</div>
+                      <div style={{ marginTop: 'auto' }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <nav style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', width: MOBILE_WIDTH, padding: '0 24px' }}>
+                <div style={{ background: '#171717', padding: '12px 8px', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ flex: 1, textAlign: 'center', color: '#facc15' }}>Home</div>
+                  <div style={{ flex: 1, textAlign: 'center' }}>Services</div>
+                  <div style={{ marginTop: -32, flex: 1, textAlign: 'center' }}>
+                    <button onClick={openQR} style={{ width: 64, height: 64, background: 'linear-gradient(135deg,#facc15,#ff8a00)', borderRadius: 9999, boxShadow: '0 10px 15px rgba(0,0,0,0.3)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'black', fontWeight: 800, border: 'none', cursor: 'pointer' }}>Scan</button>
+                  </div>
+                  <div style={{ flex: 1, textAlign: 'center' }}>Transactions</div>
+                  <div style={{ flex: 1, textAlign: 'center' }}>Wallet</div>
+                </div>
+              </nav>
+
+              {showQR && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16 }}>
+                  <div style={{ background: '#171717', width: '100%', maxWidth: MOBILE_WIDTH - 24, borderRadius: 16, padding: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <button style={{ color: '#a3a3a3', background: 'none', border: 'none', cursor: 'pointer', fontSize: 18 }} onClick={closeQR}>←</button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#facc15,#ff8a00)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#111' }}>24</div>
+                          <div style={{ fontSize: 14, color: '#e5e7eb', fontWeight: 700 }}>pay</div>
+                        </div>
+                        <div style={{ color: '#9ca3af', fontSize: 12 }}>powered by</div>
+                        <div style={{ border: '1px solid #374151', color: '#fef3c7', borderRadius: 6, padding: '2px 6px', fontSize: 12, fontWeight: 800 }}>BT</div>
+                      </div>
+                      <span />
+                    </div>
+
+                    <div style={{ background: '#f7f3f5', padding: 12, borderRadius: 12, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                      <div style={{ padding: 6, background: 'linear-gradient(180deg,#d9f3ff, #fefefe)', borderRadius: 10 }}>
+                        <div style={{ background: 'white', padding: 10, borderRadius: 8, position: 'relative', animation: pulse ? 'pulse 400ms ease-out' : 'none', outline: '4px solid #58e0e8' }}>
+                          <QRCodeBox value={`ticket:${ticket.type}:${ticket.orderNumber}:${startedAt || now}:cycle-${cycleIndex}`} size={qrSize} />
+                          {/* countdown chip */}
+                          {!isExpired && (
+                            <div style={{ position: 'absolute', top: 8, right: 8, background: '#111', color: '#fff', padding: '4px 8px', borderRadius: 12, fontSize: 12, fontWeight: 600 }}>
+                              {controlRemainingSec}s
+                            </div>
+                          )}
+                          {/* expired overlay */}
+                          {isExpired && (
+                            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fecaca', fontWeight: 800, fontSize: 18 }}>
+                              Expired
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: 12, textAlign: 'center', fontSize: 14, color: isExpired ? '#fca5a5' : '#d4d4d4' }}>
+                      {isExpired ? 'Control code expired' : `Control code available ${controlRemainingSec} seconds.`}
+                    </div>
+
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ textAlign: 'center', fontSize: 13, color: '#d1d5db', marginBottom: 6 }}>Validity:</div>
+                      <div style={{ width: '100%', background: '#404040', borderRadius: 9999, height: 12, overflow: 'hidden' }}>
+                        <div style={{ width: `${pct*100}%`, height: '100%', background: '#22c55e' }} />
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#a3a3a3', marginTop: 8 }}>
+                        <div>{formatShort(validityStart)}</div>
+                        <div>{formatShort(validityEnd)}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: 16, background: '#262626', borderRadius: 10, padding: 12 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#a3a3a3' }}><div>Ticket type:</div><div style={{ color: 'white' }}>{ticket.type}</div></div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#a3a3a3', marginTop: 8 }}><div>Purchase date:</div><div style={{ color: 'white' }}>{formatShort(ticket.purchaseDate)}</div></div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#a3a3a3', marginTop: 8 }}><div>Order number:</div><div style={{ color: 'white' }}>{ticket.orderNumber}</div></div>
+                    </div>
+
+                    <div style={{ marginTop: 12, fontSize: 14, color: '#d4d4d4', fontWeight: 500 }}>Please note that the processing time of the travel ticket purchase may take up to 5 minutes.</div>
+
+                    <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                      <button style={{ padding: '8px 16px', borderRadius: 8, background: isExpired ? '#ef4444' : '#262626', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 700 }} onClick={() => setStartedAt(Date.now())}>{isExpired ? 'New ticket' : 'Regenerate'}</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </div>
+        );
+      }
+
+      const rootEl = document.getElementById('root');
+      if (ReactDOM.createRoot) {
+        const root = ReactDOM.createRoot(rootEl);
+        root.render(<App />);
+      } else if (ReactDOM.render) {
+        ReactDOM.render(<App />, rootEl);
+      } else {
+        rootEl.innerHTML = '<div style="color:white;padding:16px">Failed to start React: no renderer available.</div>';
+      }
+    </script>
+  </body>
+  <script>
+    // Register service worker for PWA installability/offline
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch((err) => console.warn('SW registration failed', err));
+      });
+    }
+  </script>
+  </html>
+
+
