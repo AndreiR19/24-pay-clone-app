@@ -1,0 +1,14 @@
+{
+  "name": "24pay Clone",
+  "short_name": "24pay",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#facc15",
+  "icons": [
+    { "src": "./assets/icons/public-transport.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "./assets/icons/public-transport.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
+
+
