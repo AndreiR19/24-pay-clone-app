@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>24pay clone</title>
+    <title>24Pay</title>
     <meta name="theme-color" content="#facc15" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./assets/icons/public-transport.png" />
@@ -95,6 +95,7 @@
         const [startedAt, setStartedAt] = useState(null);
         const [now, setNow] = useState(Date.now());
         const [pulse, setPulse] = useState(false);
+        const [regenNonce, setRegenNonce] = useState(0);
 
         const ticket = useMemo(() => ({
           type: 'URBAN ticket',
@@ -108,8 +109,42 @@
           return () => clearInterval(t);
         }, []);
 
+        // Simple persistence for ticket start time
+        const STORAGE_KEY = 'ticket_v1';
+        function readStoredTicket() {
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return null;
+            const data = JSON.parse(raw);
+            if (!data || typeof data.startedAt !== 'number') return null;
+            return data;
+          } catch { return null; }
+        }
+        function saveStoredTicket(startTs) {
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ startedAt: startTs })); } catch {}
+        }
+        function clearStoredTicket() {
+          try { localStorage.removeItem(STORAGE_KEY); } catch {}
+        }
+
         function openQR() {
-          setStartedAt(Date.now());
+          const existing = readStoredTicket();
+          const nowTs = Date.now();
+          const maxMs = VALIDITY_MINUTES * 60 * 1000;
+          if (existing && nowTs - existing.startedAt < maxMs) {
+            setStartedAt(existing.startedAt);
+          } else {
+            setStartedAt(nowTs);
+            saveStoredTicket(nowTs);
+          }
+          setShowQR(true);
+        }
+
+        function buyNewTicket() {
+          const ts = Date.now();
+          setStartedAt(ts);
+          saveStoredTicket(ts);
+          setRegenNonce(0);
           setShowQR(true);
         }
 
@@ -120,7 +155,7 @@
         const elapsedMs = startedAt ? now - startedAt : 0;
         const validityMs = VALIDITY_MINUTES * 60 * 1000;
         const remainingMs = Math.max(validityMs - elapsedMs, 0);
-        const pct = startedAt ? Math.max(0, 1 - elapsedMs / validityMs) : 0;
+        const pct = startedAt ? Math.min(1, elapsedMs / validityMs) : 0; // fill left→right
 
         // 14-second control code cycles
         const controlMs = CONTROL_CODE_SECONDS * 1000;
@@ -128,6 +163,23 @@
         const msIntoCycle = startedAt ? (elapsedMs % controlMs) : 0;
         const controlRemainingSec = startedAt ? Math.max(0, CONTROL_CODE_SECONDS - Math.floor(msIntoCycle / 1000)) : CONTROL_CODE_SECONDS;
         const isExpired = !!startedAt && remainingMs <= 0;
+
+        // On mount, restore an active ticket if still valid
+        useEffect(() => {
+          const existing = readStoredTicket();
+          const nowTs = Date.now();
+          const maxMs = VALIDITY_MINUTES * 60 * 1000;
+          if (existing && nowTs - existing.startedAt < maxMs) {
+            setStartedAt(existing.startedAt);
+          } else if (existing) {
+            clearStoredTicket();
+          }
+        }, []);
+
+        // When it expires, clear storage
+        useEffect(() => {
+          if (isExpired) clearStoredTicket();
+        }, [isExpired]);
 
         // Pulse animation on each cycle change
         useEffect(() => {
@@ -164,8 +216,7 @@
             <div style={{ color: 'white', background: '#171717', width: MOBILE_WIDTH }}>
               <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 9999, background: 'linear-gradient(135deg,#facc15,#ff8a00)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: 'black' }}>24</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#e5e7eb' }}>pay</div>
+                  <img src="./assets/logos/Logo-24pay_black-txt.png" alt="24Pay" style={{ height: 28 }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{ width: 32, height: 32, borderRadius: 9999, background: '#262626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🔔</div>
@@ -191,6 +242,43 @@
                   <div style={{ fontSize: 22, marginLeft: 12 }}>❤️</div>
                 </div>
               </section>
+
+              {/* Ticket expired → quick buy new */}
+              {isExpired && (
+                <section style={{ marginBottom: 24 }}>
+                  <div style={{ borderRadius: 16, background: '#262626', padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #3f3f46' }}>
+                    <div style={{ flex: 1, marginRight: 12 }}>
+                      <div style={{ fontSize: 12, color: '#fca5a5' }}>Ticket expired</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, marginTop: 6, color: '#e5e7eb' }}>{ticket.type}</div>
+                      <div style={{ fontSize: 13, color: '#d4d4d4', marginTop: 6 }}>Purchase a new ticket to continue.</div>
+                    </div>
+                    <div>
+                      <button onClick={buyNewTicket} style={{ padding: '10px 14px', background: 'linear-gradient(135deg,#facc15,#ff8a00)', color: '#111', border: 'none', borderRadius: 10, fontWeight: 800, cursor: 'pointer' }}>Buy new</button>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* My ticket */}
+              {startedAt && !isExpired && (
+                <section style={{ marginBottom: 24 }}>
+                  <div style={{ borderRadius: 16, background: '#262626', padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #3f3f46' }}>
+                    <div style={{ flex: 1, marginRight: 12 }}>
+                      <div style={{ fontSize: 12, color: '#a3a3a3' }}>My ticket</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, marginTop: 6, color: '#e5e7eb' }}>{ticket.type}</div>
+                      <div style={{ fontSize: 13, color: '#d4d4d4', marginTop: 6 }}>Remaining: {formatDuration(remainingMs)}</div>
+                      <div style={{ marginTop: 8 }}>
+                        <div style={{ width: '100%', background: '#ffffff', borderRadius: 9999, height: 8, overflow: 'hidden' }}>
+                          <div style={{ width: `${pct*100}%`, height: '100%', background: '#22c55e' }} />
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <button onClick={() => setShowQR(true)} style={{ padding: '10px 14px', background: 'linear-gradient(135deg,#facc15,#ff8a00)', color: '#111', border: 'none', borderRadius: 10, fontWeight: 800, cursor: 'pointer' }}>Open QR</button>
+                    </div>
+                  </div>
+                </section>
+              )}
 
               {/* Services */}
               <section style={{ marginBottom: 80 }}>
@@ -238,20 +326,17 @@
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                       <button style={{ color: '#a3a3a3', background: 'none', border: 'none', cursor: 'pointer', fontSize: 18 }} onClick={closeQR}>←</button>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#facc15,#ff8a00)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#111' }}>24</div>
-                          <div style={{ fontSize: 14, color: '#e5e7eb', fontWeight: 700 }}>pay</div>
-                        </div>
-                        <div style={{ color: '#9ca3af', fontSize: 12 }}>powered by</div>
-                        <div style={{ border: '1px solid #374151', color: '#fef3c7', borderRadius: 6, padding: '2px 6px', fontSize: 12, fontWeight: 800 }}>BT</div>
+                        <img src="./assets/logos/Logo-24pay_black-txt.png" alt="24Pay" style={{ height: 30 }} />
+                        <div style={{ color: '#9ca3af', fontSize: 14 }}>powered by</div>
+                        <img src="./assets/logos/Banca_Transilvania_Logo.png" alt="Banca Transilvania" style={{ height: 18, background: '#111', borderRadius: 4, padding: '2px 4px', border: '1px solid #374151' }} />
                       </div>
                       <span />
                     </div>
 
                     <div style={{ background: '#f7f3f5', padding: 12, borderRadius: 12, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                       <div style={{ padding: 6, background: 'linear-gradient(180deg,#d9f3ff, #fefefe)', borderRadius: 10 }}>
-                        <div style={{ background: 'white', padding: 10, borderRadius: 8, position: 'relative', animation: pulse ? 'pulse 400ms ease-out' : 'none', outline: '4px solid #58e0e8' }}>
-                          <QRCodeBox value={`ticket:${ticket.type}:${ticket.orderNumber}:${startedAt || now}:cycle-${cycleIndex}`} size={qrSize} />
+                        <div style={{ background: 'white', padding: 1, borderRadius: 8, position: 'relative', animation: pulse ? 'pulse 400ms ease-out' : 'none', border: '4px solid #58e0e8', overflow: 'hidden' }}>
+                          <QRCodeBox value={`ticket:${ticket.type}:${ticket.orderNumber}:${startedAt || now}:cycle-${cycleIndex}:n-${regenNonce}`} size={qrSize} />
                           {/* countdown chip */}
                           {!isExpired && (
                             <div style={{ position: 'absolute', top: 8, right: 8, background: '#111', color: '#fff', padding: '4px 8px', borderRadius: 12, fontSize: 12, fontWeight: 600 }}>
@@ -274,10 +359,10 @@
 
                     <div style={{ marginTop: 12 }}>
                       <div style={{ textAlign: 'center', fontSize: 13, color: '#d1d5db', marginBottom: 6 }}>Validity:</div>
-                      <div style={{ width: '100%', background: '#404040', borderRadius: 9999, height: 12, overflow: 'hidden' }}>
+                      <div style={{ width: '100%', background: '#ffffff', borderRadius: 9999, height: 12, overflow: 'hidden' }}>
                         <div style={{ width: `${pct*100}%`, height: '100%', background: '#22c55e' }} />
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#a3a3a3', marginTop: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#ffffff', marginTop: 8 }}>
                         <div>{formatShort(validityStart)}</div>
                         <div>{formatShort(validityEnd)}</div>
                       </div>
@@ -289,10 +374,22 @@
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#a3a3a3', marginTop: 8 }}><div>Order number:</div><div style={{ color: 'white' }}>{ticket.orderNumber}</div></div>
                     </div>
 
-                    <div style={{ marginTop: 12, fontSize: 14, color: '#d4d4d4', fontWeight: 500 }}>Please note that the processing time of the travel ticket purchase may take up to 5 minutes.</div>
+                    <div style={{ marginTop: 12, fontSize: 18, color: '#e5e7eb', fontWeight: 700 }}>Please note that the processing time of the travel ticket purchase may take up to 5 minutes.</div>
 
                     <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
-                      <button style={{ padding: '8px 16px', borderRadius: 8, background: isExpired ? '#ef4444' : '#262626', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 700 }} onClick={() => setStartedAt(Date.now())}>{isExpired ? 'New ticket' : 'Regenerate'}</button>
+                      <button
+                        style={{ padding: '8px 16px', borderRadius: 8, background: isExpired ? '#ef4444' : '#262626', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 700 }}
+                        onClick={() => {
+                          if (isExpired) {
+                            const ts = Date.now();
+                            setStartedAt(ts);
+                            saveStoredTicket(ts);
+                            setRegenNonce(0);
+                          } else {
+                            setRegenNonce((n) => n + 1);
+                          }
+                        }}
+                      >{isExpired ? 'New ticket' : 'Regenerate'}</button>
                     </div>
                   </div>
                 </div>
