@@ -11,6 +11,18 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <style>
       html, body { height: 100%; margin: 0; }
+      body { background: #171717; }
+      #root { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+      .fixed-mobile-container {
+        width: 390px;
+        max-width: 100vw;
+        margin: 0 auto;
+        background: #171717;
+      }
+      img, video {
+        max-width: 100%;
+        height: auto;
+      }
       @keyframes pulse {
         0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.6); }
         70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(250, 204, 21, 0); }
@@ -213,7 +225,7 @@
 
         return (
           <div style={{ minHeight: '100vh', background: '#171717', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-            <div style={{ color: 'white', background: '#171717', width: MOBILE_WIDTH }}>
+            <div className="fixed-mobile-container" style={{ color: 'white', background: '#171717' }}>
               <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <img src="Logo-24pay_black-txt.png" alt="24Pay" style={{ height: 28 }} />
@@ -308,7 +320,7 @@
                 </div>
               </section>
 
-              <nav style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', width: MOBILE_WIDTH, padding: '0 24px' }}>
+              <nav style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', width: 390, padding: '0 24px' }}>
                 <div style={{ background: '#171717', padding: '12px 8px', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ flex: 1, textAlign: 'center', color: '#facc15' }}>Home</div>
                   <div style={{ flex: 1, textAlign: 'center' }}>Services</div>
@@ -322,7 +334,7 @@
 
               {showQR && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16 }}>
-                  <div style={{ background: '#171717', width: '100%', maxWidth: MOBILE_WIDTH - 24, borderRadius: 16, padding: 16 }}>
+                  <div style={{ background: '#171717', width: '100%', maxWidth: 366, borderRadius: 16, padding: 16 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                       <button style={{ color: '#a3a3a3', background: 'none', border: 'none', cursor: 'pointer', fontSize: 18 }} onClick={closeQR}>←</button>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -420,7 +432,6 @@
     }
   </script>
   </html>
-
 
 
 
