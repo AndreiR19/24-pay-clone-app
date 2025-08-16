@@ -345,9 +345,9 @@
                       <span />
                     </div>
 
-                    <div style={{ background: '#f7f3f5', padding: 1, borderRadius: 12, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                      <div style={{ padding: 0, background: 'linear-gradient(180deg,#d9f3ff, #fefefe)', borderRadius: 10 }}>
-                        <div style={{ background: 'white', padding: 20, borderRadius: 8, position: 'relative', animation: pulse ? 'pulse 400ms ease-out' : 'none', border: '5px solid #58e0e8', overflow: 'hidden' }}>
+                    <div style={{ background: '#f7f3f5', padding: 0, borderRadius: 16, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                      <div style={{ padding: 0, background: 'linear-gradient(180deg,#d9f3ff, #fefefe)', borderRadius: 14 }}>
+                        <div style={{ background: 'white', padding: 20, borderRadius: 14, position: 'relative', animation: pulse ? 'pulse 400ms ease-out' : 'none', border: '5px solid #58e0e8', overflow: 'hidden' }}>
                           <QRCodeBox value={`ticket:${ticket.type}:${ticket.orderNumber}:${startedAt || now}:cycle-${cycleIndex}:n-${regenNonce}`} size={qrSize} />
                           {/* expired overlay */}
                           {isExpired && (
