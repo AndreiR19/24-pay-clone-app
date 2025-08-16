@@ -340,21 +340,15 @@
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <img src="Logo-24pay_black-txt.png" alt="24Pay" style={{ height: 30 }} />
                         <div style={{ color: '#9ca3af', fontSize: 8 }}>powered by</div>
-                        <img src="Banca_Transilvania_Logo2.png" alt="Banca Transilvania" style={{ height: 18, background: '#111', borderRadius: 4, padding: '2px 4px', border: '1px solid #374151' }} />
+                        <img src="Banca_Transilvania_Logo2.png" alt="Banca Transilvania" style={{ height: 18, background: '#171717', borderRadius: 4, padding: '2px 4px' }} />
                       </div>
                       <span />
                     </div>
 
                     <div style={{ background: '#f7f3f5', padding: 1, borderRadius: 12, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                       <div style={{ padding: 0, background: 'linear-gradient(180deg,#d9f3ff, #fefefe)', borderRadius: 10 }}>
-                        <div style={{ background: 'white', padding: 20, borderRadius: 8, position: 'relative', animation: pulse ? 'pulse 400ms ease-out' : 'none', border: '4px solid #58e0e8', overflow: 'hidden' }}>
+                        <div style={{ background: 'white', padding: 20, borderRadius: 8, position: 'relative', animation: pulse ? 'pulse 400ms ease-out' : 'none', border: '5px solid #58e0e8', overflow: 'hidden' }}>
                           <QRCodeBox value={`ticket:${ticket.type}:${ticket.orderNumber}:${startedAt || now}:cycle-${cycleIndex}:n-${regenNonce}`} size={qrSize} />
-                          {/* countdown chip */}
-                          {!isExpired && (
-                            <div style={{ position: 'absolute', top: 8, right: 8, background: '#111', color: '#fff', padding: '4px 8px', borderRadius: 12, fontSize: 12, fontWeight: 600 }}>
-                              {controlRemainingSec}s
-                            </div>
-                          )}
                           {/* expired overlay */}
                           {isExpired && (
                             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fecaca', fontWeight: 800, fontSize: 18 }}>
@@ -365,13 +359,13 @@
                       </div>
                     </div>
 
-                    <div style={{ marginTop: 12, textAlign: 'center', fontSize: 14, color: isExpired ? '#fca5a5' : '#d4d4d4' }}>
+                    <div style={{ marginTop: 12, textAlign: 'center', fontSize: 14, color: isExpired ? '#fca5a5' : '#ffffff' }}>
                       {isExpired ? 'Control code expired' : `Control code available ${controlRemainingSec} seconds.`}
                     </div>
 
                     <div style={{ marginTop: 12 }}>
-                      <div style={{ textAlign: 'center', fontSize: 13, color: '#d1d5db', marginBottom: 6 }}>Validity:</div>
-                      <div style={{ width: '100%', background: '#ffffff', borderRadius: 9999, height: 12, overflow: 'hidden' }}>
+                      <div style={{ textAlign: 'center', fontSize: 14, color: '#ffffff', marginBottom: 9}}>Validity:</div>
+                      <div style={{ width: '100%', background: '#ffffff', borderRadius: 9999, height: 16, overflow: 'hidden' }}>
                         <div style={{ width: `${pct*100}%`, height: '100%', background: '#22c55e' }} />
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#ffffff', marginTop: 8 }}>
@@ -381,12 +375,12 @@
                     </div>
 
                     <div style={{ marginTop: 16, background: '#262626', borderRadius: 10, padding: 12 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#a3a3a3' }}><div>Ticket type:</div><div style={{ color: 'white' }}>{ticket.type}</div></div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#a3a3a3', marginTop: 8 }}><div>Purchase date:</div><div style={{ color: 'white' }}>{formatShort(ticket.purchaseDate)}</div></div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#a3a3a3', marginTop: 8 }}><div>Order number:</div><div style={{ color: 'white' }}>{ticket.orderNumber}</div></div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#a3a3a3', fontWeight: 500 }}><div>Ticket type:</div><div style={{ color: 'white' }}>{ticket.type}</div></div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#a3a3a3', marginTop: 8, fontWeight: 500 }}><div>Purchase date:</div><div style={{ color: 'white' }}>{formatShort(ticket.purchaseDate)}</div></div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#a3a3a3', marginTop: 8, fontWeight: 500 }}><div>Order number:</div><div style={{ color: 'white' }}>{ticket.orderNumber}</div></div>
                     </div>
 
-                    <div style={{ marginTop: 12, fontSize: 18, color: '#e5e7eb', fontWeight: 700 }}>Please note that the processing time of the travel ticket purchase may take up to 5 minutes.</div>
+                    <div style={{ marginTop: 12, fontSize: 17, color: '#e5e7eb', fontWeight: 600 }}>Please note that the processing time of the travel ticket purchase may take up to 5 minutes.</div>
 
                     <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
                       <button
