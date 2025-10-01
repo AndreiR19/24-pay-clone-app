@@ -110,9 +110,9 @@
         const [regenNonce, setRegenNonce] = useState(0);
 
         const ticket = useMemo(() => ({
-          type: 'URBAN ticket',
+          type: 'ticket - Brasov - Sacele',
           purchaseDate: new Date(),
-          orderNumber: '228162467',
+          orderNumber: '230842719',
           price: '5.0 RON'
         }), []);
 
@@ -247,7 +247,7 @@
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 12, color: '#a3a3a3' }}>RATBV S.A.</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, marginTop: 6, color: '#e5e7eb' }}>Brașov - URBAN ticket - <span style={{ color: '#ffdd42' }}>{ticket.price}</span></div>
+                      <div style={{ fontSize: 16, fontWeight: 700, marginTop: 6, color: '#e5e7eb' }}>ticket - Brasov - Sacele - <span style={{ color: '#ffdd42' }}>{ticket.price}</span></div>
                       <div style={{ marginTop: 8, height: 32, width: '100%', background: '#c7cffd', borderRadius: 10 }} />
                     </div>
                   </div>
@@ -357,6 +357,8 @@
                       </div>
                     </div>
 
+
+                
                     <div style={{ marginTop: 12, textAlign: 'center', fontSize: 14, color: isExpired ? '#fca5a5' : '#ffffff' }}>
                       {isExpired ? 'Control code expired' : `Control code available ${controlRemainingSec} seconds.`}
                     </div>
