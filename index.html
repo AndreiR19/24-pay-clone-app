@@ -176,6 +176,17 @@
         const controlRemainingSec = startedAt ? Math.max(0, CONTROL_CODE_SECONDS - Math.floor(msIntoCycle / 1000)) : CONTROL_CODE_SECONDS;
         const isExpired = !!startedAt && remainingMs <= 0;
 
+        // QR border color by elapsed time windows:
+        // 0-30 min: default teal (unchanged)
+        // 30-60 min: purple
+        // 60-90 min: orange
+        const elapsedMinutes = startedAt ? Math.floor(elapsedMs / 60000) : 0;
+        const qrBorderColor = elapsedMinutes >= 60
+          ? '#ff8a00' // orange
+          : (elapsedMinutes >= 30
+            ? '#a855f7' // purple
+            : '#58e0e8'); // default
+
         // On mount, restore an active ticket if still valid
         useEffect(() => {
           const existing = readStoredTicket();
@@ -338,14 +349,14 @@
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                       <button style={{ color: '#ffffff', background: 'none', border: 'none', cursor: 'pointer', fontSize: 18 }} onClick={closeQR}>←</button>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ color: '#ffffff', fontSize: 18, position: 'absolute', left: '45%', transform: 'translateX(-50%)' }}>Transaction details</div>
+                        <div style={{ color: '#ffffff', fontSize: 18, position: 'absolute', left: '40%', transform: 'translateX(-50%)' }}>Transaction details</div>
                       </div>
                       <span />
                     </div>
 
                     <div style={{ background: '#f7f3f5', padding: 0, borderRadius: 16, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                       <div style={{ padding: 0, background: 'linear-gradient(180deg,#d9f3ff, #fefefe)', borderRadius: 14 }}>
-                        <div style={{ background: 'white', padding: 20, borderRadius: 14, position: 'relative', animation: pulse ? 'pulse 400ms ease-out' : 'none', border: '5px solid #58e0e8', overflow: 'hidden' }}>
+                        <div style={{ background: 'white', padding: 20, borderRadius: 14, position: 'relative', animation: pulse ? 'pulse 400ms ease-out' : 'none', border: `5px solid ${qrBorderColor}`, overflow: 'hidden' }}>
                           <QRCodeBox value={`ticket:${ticket.type}:${ticket.orderNumber}:${startedAt || now}:cycle-${cycleIndex}:n-${regenNonce}`} size={qrSize} />
                           {/* expired overlay */}
                           {isExpired && (
@@ -426,8 +437,6 @@
     }
   </script>
   </html>
-
-
 
 
 
